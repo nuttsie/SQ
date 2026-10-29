@@ -482,34 +482,54 @@ function initGameEvents() {
     };
   }
 
- window.addEventListener('keydown', (e) => {
-  const k = e.key.toLowerCase();
-  if (currentGame === 'snake') {
-    if ((k === 'w' || k === 'arrowup') && snakeDir !== 'DOWN') nextSnakeDir = 'UP';
-    if ((k === 's' || k === 'arrowdown') && snakeDir !== 'UP') nextSnakeDir = 'DOWN';
-    if ((k === 'a' || k === 'arrowleft') && snakeDir !== 'RIGHT') nextSnakeDir = 'LEFT';
-    if ((k === 'd' || k === 'arrowright') && snakeDir !== 'LEFT') nextSnakeDir = 'RIGHT';
-  }
-  // ...
-});
+  // 1. Kontrol Keyboard Desktop (WASD & Panah)
+  window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (currentGame === 'snake') {
+      if ((k === 'w' || k === 'arrowup') && snakeDir !== 'DOWN') nextSnakeDir = 'UP';
+      if ((k === 's' || k === 'arrowdown') && snakeDir !== 'UP') nextSnakeDir = 'DOWN';
+      if ((k === 'a' || k === 'arrowleft') && snakeDir !== 'RIGHT') nextSnakeDir = 'LEFT';
+      if ((k === 'd' || k === 'arrowright') && snakeDir !== 'LEFT') nextSnakeDir = 'RIGHT';
+    } else if (currentGame === 'brick') {
+      if (k === 'a' || k === 'arrowleft') paddleX = Math.max(0, paddleX - 20);
+      if (k === 'd' || k === 'arrowright') paddleX = Math.min(220, paddleX + 20);
+    }
+  });
 
+  // 2. Kontrol Touch D-Pad Layar HP (Memperbaiki D-Pad yang Mogok)
   const btnUp = document.getElementById('btnUp');
   const btnDown = document.getElementById('btnDown');
   const btnLeft = document.getElementById('btnLeft');
   const btnRight = document.getElementById('btnRight');
 
-  if (btnUp) btnUp.onclick = () => { if (snakeDir !== 'DOWN') snakeDir = 'UP'; };
-  if (btnDown) btnDown.onclick = () => { if (snakeDir !== 'UP') snakeDir = 'DOWN'; };
-  if (btnLeft) btnLeft.onclick = () => {
-    if (currentGame === 'snake' && snakeDir !== 'RIGHT') snakeDir = 'LEFT';
-    if (currentGame === 'brick') paddleX = Math.max(0, paddleX - 25);
+  const handleTouch = (btn, action) => {
+    if (!btn) return;
+    const trigger = (e) => {
+      e.preventDefault(); // Mencegah layar HP ter-scroll saat mencet D-Pad
+      action();
+    };
+    btn.addEventListener('touchstart', trigger, { passive: false });
+    btn.addEventListener('click', trigger);
   };
-  if (btnRight) btnRight.onclick = () => {
-    if (currentGame === 'snake' && snakeDir !== 'LEFT') snakeDir = 'RIGHT';
-    if (currentGame === 'brick') paddleX = Math.min(220, paddleX + 25);
-  };
-}
 
+  handleTouch(btnUp, () => {
+    if (snakeDir !== 'DOWN') nextSnakeDir = 'UP';
+  });
+
+  handleTouch(btnDown, () => {
+    if (snakeDir !== 'UP') nextSnakeDir = 'DOWN';
+  });
+
+  handleTouch(btnLeft, () => {
+    if (currentGame === 'snake' && snakeDir !== 'RIGHT') nextSnakeDir = 'LEFT';
+    if (currentGame === 'brick') paddleX = Math.max(0, paddleX - 25);
+  });
+
+  handleTouch(btnRight, () => {
+    if (currentGame === 'snake' && snakeDir !== 'LEFT') nextSnakeDir = 'RIGHT';
+    if (currentGame === 'brick') paddleX = Math.min(220, paddleX + 25);
+  });
+}
 function stopGameLoop() {
   if (gameInterval) clearInterval(gameInterval);
 }
