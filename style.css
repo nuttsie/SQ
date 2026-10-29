@@ -1,9 +1,6 @@
-/* =========================================================
-   SakuQ — Modern Fintech UI
-   Menggantikan isi style.css lama.
-   Kompatibel dengan class dan ID pada index.html yang diberikan.
-   ========================================================= */
-
+/* ==========================================
+   1. VARIABEL TEMA (DARK / LIGHT MODERN FINTECH)
+   ========================================== */
 :root {
   color-scheme: dark;
   --bg-color: #0b1020;
@@ -41,12 +38,14 @@
   --shadow: 0 16px 38px rgba(32, 48, 82, .08);
 }
 
+/* ==========================================
+   2. STYLES GLOBAL & LAYOUT
+   ========================================== */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 html {
@@ -90,7 +89,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   padding-bottom: 18px;
 }
 
-/* Header */
+/* Header Utama */
 .app-header {
   display: flex;
   align-items: center;
@@ -164,7 +163,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   white-space: nowrap;
 }
 
-/* Tab content */
+/* Sistem Tab */
 .tab-content {
   display: none;
   flex-direction: column;
@@ -181,7 +180,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Cards */
+/* Kartu & Ringkasan */
 .card {
   position: relative;
   min-width: 0;
@@ -341,7 +340,60 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   overflow-wrap: anywhere;
 }
 
-/* Forms */
+/* Multi-Target Cards */
+.target-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.target-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 16px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  transition: border-color .2s ease, transform .2s ease;
+}
+
+.target-item-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(129, 140, 248, .5);
+}
+
+.target-item-card.active-target {
+  background: linear-gradient(135deg, rgba(99, 102, 241, .12), var(--input-bg) 75%);
+  border-color: var(--primary);
+}
+
+.target-item-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.target-item-header strong {
+  color: var(--text-color);
+  overflow-wrap: anywhere;
+}
+
+.target-item-header small {
+  color: var(--text-muted);
+  font-size: .73rem;
+  overflow-wrap: anywhere;
+}
+
+.target-actions-btn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Form & Inputs */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -390,7 +442,7 @@ select {
   display: none !important;
 }
 
-/* Buttons */
+/* Tombol-Tombol Aksi */
 .btn {
   width: 100%;
   min-height: 47px;
@@ -459,60 +511,7 @@ select {
   border: 1px solid rgba(251, 113, 133, .4);
 }
 
-/* Savings targets */
-.target-list-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.target-item-card {
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
-  padding: 16px;
-  background: var(--input-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  transition: border-color .2s ease, transform .2s ease;
-}
-
-.target-item-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(129, 140, 248, .5);
-}
-
-.target-item-card.active-target {
-  background: linear-gradient(135deg, rgba(99, 102, 241, .12), var(--input-bg) 75%);
-  border-color: var(--primary);
-}
-
-.target-item-header {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: .8rem;
-  line-height: 1.5;
-}
-
-.target-item-header strong {
-  color: var(--text-color);
-  overflow-wrap: anywhere;
-}
-
-.target-item-header small {
-  color: var(--text-muted);
-  font-size: .73rem;
-  overflow-wrap: anywhere;
-}
-
-.target-actions-btn {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* Period filters and category breakdown */
+/* Filter Periode & Analisis Kategori */
 .filter-period-group, .game-selector {
   display: flex;
   flex-wrap: wrap;
@@ -595,7 +594,9 @@ select {
   text-align: right;
 }
 
-/* Retro games — keep canvas internal dimensions unchanged */
+/* ==========================================
+   3. STYLING GAMES & D-PAD (FIXED TOMBOL MENYALA KONSISTEN)
+   ========================================== */
 .game-card h3 { margin-bottom: 16px; }
 
 .game-screen-wrapper {
@@ -642,6 +643,7 @@ select {
 
 .game-info-bar strong { color: var(--text-color); }
 
+/* Kontrol D-Pad Layar HP */
 .dpad-container {
   display: flex;
   flex-direction: column;
@@ -668,21 +670,31 @@ select {
   font-size: 1rem;
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
   touch-action: manipulation;
-  transition: background .15s ease, transform .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .1s ease, transform .1s ease, border-color .1s ease, box-shadow .1s ease;
 }
 
-.dpad-btn:hover {
-  background: rgba(129, 140, 248, .15);
+/* Hover hanya untuk kursor mouse desktop */
+@media (hover: hover) and (pointer: fine) {
+  .dpad-btn:hover {
+    background: rgba(129, 140, 248, .15);
+    border-color: var(--primary);
+  }
+}
+
+/* Efek Tombol Menyala Konsisten Saat Ditekan (Touch HP & Klik Mouse) */
+.dpad-btn:active,
+.dpad-btn.active {
+  transform: scale(.92);
+  background: var(--primary-strong);
+  color: #ffffff;
   border-color: var(--primary);
+  box-shadow: 0 0 14px rgba(99, 102, 241, .6);
 }
 
-.dpad-btn:active {
-  transform: scale(.94);
-  background: rgba(129, 140, 248, .25);
-}
-
-/* Transaction history */
+/* Transaksi & Riwayat */
 .history-list {
   max-height: 300px;
   overflow-y: auto;
@@ -738,7 +750,7 @@ select {
 
 .mt-10 { margin-top: 14px; }
 
-/* Bottom navigation */
+/* Navigasi Tab Bawah */
 .bottom-nav {
   position: fixed;
   z-index: 100;
@@ -802,7 +814,7 @@ select {
   white-space: nowrap;
 }
 
-/* Scrollbar and reduced motion */
+/* Custom Scrollbar & Aksesibilitas */
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
