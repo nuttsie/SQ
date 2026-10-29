@@ -443,7 +443,7 @@ function drawPieChart(categories, grandTotal) {
 }
 
 // ==========================================
-// 7. MINI GAMES RETRO (DIJAMIN NOL BUG INVISIBLE WALL)
+// 7. MINI GAMES RETRO 
 // ==========================================
 let snake = [];
 let snakeDir = 'RIGHT';
@@ -516,13 +516,19 @@ function stopGameLoop() {
   if (gameInterval) clearInterval(gameInterval);
 }
 
-function resetGameScreen() {
-  stopGameLoop();
+// Fungsi pembantu untuk mengunci ukuran internal Canvas
+function fixCanvasSize() {
   const canvas = document.getElementById('gameCanvas');
-  if (!canvas) return;
-  
+  if (!canvas) return null;
   canvas.width = 300;
   canvas.height = 300;
+  return canvas;
+}
+
+function resetGameScreen() {
+  stopGameLoop();
+  const canvas = fixCanvasSize();
+  if (!canvas) return;
 
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#9bbc0f';
@@ -533,14 +539,10 @@ function resetGameScreen() {
   document.getElementById('gameHighScore').textContent = currentGame === 'snake' ? appData.snakeHighScore : appData.brickHighScore;
 }
 
-// ------------------------------------------
-// GAME 1: SNAKE KLASIK (PRESISI 20x20 GRID)
-// ------------------------------------------
+// GAME 1: SNAKE KLASIK
 function startSnakeGame() {
   stopGameLoop();
-  const canvas = document.getElementById('gameCanvas');
-  canvas.width = 300;
-  canvas.height = 300;
+  const canvas = fixCanvasSize();
 
   snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }];
   snakeDir = 'RIGHT';
@@ -587,21 +589,10 @@ function startSnakeGame() {
   }, 120);
 }
 
-function spawnSnakeFood() {
-  food = {
-    x: Math.floor(Math.random() * 20),
-    y: Math.floor(Math.random() * 20)
-  };
-}
-
-// ------------------------------------------
-// GAME 2: BRICK BREAKER (PRESISI 0 - 300px)
-// ------------------------------------------
+// GAME 2: BRICK BREAKER
 function startBrickGame() {
   stopGameLoop();
-  const canvas = document.getElementById('gameCanvas');
-  canvas.width = 300;
-  canvas.height = 300;
+  const canvas = fixCanvasSize();
 
   paddleX = 110;
   
@@ -621,15 +612,17 @@ function startBrickGame() {
     ball.y += ball.dy;
 
     // Pantulan Tembok Kiri (0px) & Kanan Presisi (295px)
-    if (ball.x <= 5 || ball.x >= 295) {
-      ball.dx *= -1;
-      if (ball.x < 5) ball.x = 5;
-      if (ball.x > 295) ball.x = 295;
+    if (ball.x <= 5) {
+      ball.dx = Math.abs(ball.dx);
+      ball.x = 5;
+    } else if (ball.x >= 295) {
+      ball.dx = -Math.abs(ball.dx);
+      ball.x = 295;
     }
 
     // Pantulan Tembok Atas
     if (ball.y <= 5) {
-      ball.dy *= -1;
+      ball.dy = Math.abs(ball.dy);
       ball.y = 5;
     }
 
