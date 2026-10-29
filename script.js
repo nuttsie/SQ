@@ -540,37 +540,44 @@ function resetGameScreen() {
 }
 
 // GAME 1: SNAKE KLASIK
-// 1. Definisikan fungsi spawn makanan di atas agar siap dipanggil
+// Variable penampung arah agar tidak berbalik instant
+let nextSnakeDir = 'RIGHT';
+
+// 1. Definisikan fungsi spawn makanan di atas sebelum dipanggil
 function spawnSnakeFood() {
   food = {
-    x: Math.floor(Math.random() * 20), // Angka acak grid 0-19
+    x: Math.floor(Math.random() * 20),
     y: Math.floor(Math.random() * 20)
   };
 }
 
 // 2. Fungsi Utama Game Snake
 function startSnakeGame() {
-  stopGameLoop(); // Hentikan loop sebelumnya jika ada
+  stopGameLoop(); // Hentikan loop game sebelumnya
   const canvas = fixCanvasSize();
   if (!canvas) return;
 
-  // Inisialisasi posisi awal ular
+  // Inisialisasi Ular & Arah
   snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }];
   snakeDir = 'RIGHT';
+  nextSnakeDir = 'RIGHT';
   gameScore = 0;
   
-  // Buat makanan pertama kali
+  // Buat makanan pertama
   spawnSnakeFood();
 
-  // Jalankan interval game
+  // Jalankan interval pergerakan ular
   gameInterval = setInterval(() => {
+    // Terapkan arah baru dari buffer
+    snakeDir = nextSnakeDir;
+
     const head = { ...snake[0] };
     if (snakeDir === 'UP') head.y -= 1;
     if (snakeDir === 'DOWN') head.y += 1;
     if (snakeDir === 'LEFT') head.x -= 1;
     if (snakeDir === 'RIGHT') head.x += 1;
 
-    // Deteksi Tabrakan Dinding (Grid 0 - 19) atau Ekor Sendiri
+    // Deteksi Tabrakan Tembok (Grid 0-19) atau Menabrak Ekor Sendiri
     if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 || snake.some(s => s.x === head.x && s.y === head.y)) {
       stopGameLoop();
       alert(`GAME OVER! Skor: ${gameScore}`);
@@ -583,7 +590,7 @@ function startSnakeGame() {
 
     snake.unshift(head);
 
-    // Deteksi Memakan Makanan
+    // Memakan Makanan
     if (head.x === food.x && head.y === food.y) {
       gameScore += 10;
       document.getElementById('gameScore').textContent = gameScore;
@@ -592,16 +599,14 @@ function startSnakeGame() {
       snake.pop();
     }
 
-    // Render Gambar di Canvas
+    // Render Ular & Makanan di Canvas
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#9bbc0f'; // Background LCD
+    ctx.fillStyle = '#9bbc0f';
     ctx.fillRect(0, 0, 300, 300);
 
-    // Gambar Ular
     ctx.fillStyle = '#0f380f';
     snake.forEach(s => ctx.fillRect(s.x * 15, s.y * 15, 14, 14));
 
-    // Gambar Makanan
     ctx.fillStyle = '#8b0000';
     ctx.fillRect(food.x * 15, food.y * 15, 14, 14);
   }, 120);
