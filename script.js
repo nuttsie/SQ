@@ -482,18 +482,16 @@ function initGameEvents() {
     };
   }
 
-  window.addEventListener('keydown', (e) => {
-    const k = e.key.toLowerCase();
-    if (currentGame === 'snake') {
-      if ((k === 'w' || k === 'arrowup') && snakeDir !== 'DOWN') snakeDir = 'UP';
-      if ((k === 's' || k === 'arrowdown') && snakeDir !== 'UP') snakeDir = 'DOWN';
-      if ((k === 'a' || k === 'arrowleft') && snakeDir !== 'RIGHT') snakeDir = 'LEFT';
-      if ((k === 'd' || k === 'arrowright') && snakeDir !== 'LEFT') snakeDir = 'RIGHT';
-    } else if (currentGame === 'brick') {
-      if (k === 'a' || k === 'arrowleft') paddleX = Math.max(0, paddleX - 20);
-      if (k === 'd' || k === 'arrowright') paddleX = Math.min(220, paddleX + 20); // 300px - 80px = 220px
-    }
-  });
+ window.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (currentGame === 'snake') {
+    if ((k === 'w' || k === 'arrowup') && snakeDir !== 'DOWN') nextSnakeDir = 'UP';
+    if ((k === 's' || k === 'arrowdown') && snakeDir !== 'UP') nextSnakeDir = 'DOWN';
+    if ((k === 'a' || k === 'arrowleft') && snakeDir !== 'RIGHT') nextSnakeDir = 'LEFT';
+    if ((k === 'd' || k === 'arrowright') && snakeDir !== 'LEFT') nextSnakeDir = 'RIGHT';
+  }
+  // ...
+});
 
   const btnUp = document.getElementById('btnUp');
   const btnDown = document.getElementById('btnDown');
