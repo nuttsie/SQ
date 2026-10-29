@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SakuQ - Hemat & Nabung Seru</title>
+  <link rel="stylesheet" href="style.css?v=35">
+  <!-- Pustaka Efek Konfeti saat Target 100% -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header Utama -->
+    <header class="app-header">
+      <div class="logo">
+        <span class="logo-icon">👛</span>
+        <h1>SakuQ</h1>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Tombol Switch Tema -->
+        <button id="themeToggleBtn" class="theme-btn" title="Ubah Tema">🌙</button>
+        
+        <!-- Lencana Streak Hari Hemat -->
+        <div class="streak-badge" id="streakBadge" title="Streak Hari Hemat">
+          🔥 <span id="streakCount">0</span> Hari
+        </div>
+      </div>
+    </header>
+
+    <!-- ==========================================
+         MENU 1: BERANDA
+         ========================================== -->
+    <main id="tabHome" class="tab-content active-tab">
+      <section class="card summary-card">
+        <h2>Ringkasan Keuangan</h2>
+        <div class="balance-grid">
+          <div class="stat-box primary-box">
+            <small>Saldo Tersedia</small>
+            <div class="stat-value" id="availableBalanceDisplay">Rp 0</div>
+          </div>
+          <div class="stat-box accent-box">
+            <small>Total Tabungan</small>
+            <div class="stat-value" id="totalSavingsDisplay">Rp 0</div>
+          </div>
+        </div>
+        
+        <div class="total-net-box">
+          <small>Total Uang Tercatat: <strong id="totalNetDisplay">Rp 0</strong></small>
+          <small class="sub-text">Sisa Jajan Hari Ini: <strong id="dailyBudgetDisplay">Rp 0</strong></small>
+        </div>
+
+        <!-- Banner Progress Bar Target Aktif -->
+        <div class="target-section mt-10">
+          <div class="target-header">
+            <span>Target Aktif: <strong id="activeTargetName">Belum Ada Target</strong></span>
+            <span id="activeTargetProgressPercent">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="activeTargetProgressBar" style="width: 0%;"></div>
+          </div>
+          <div class="target-sub-info">
+            <span id="activeTargetAmountText">Rp 0 / Rp 0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ringkasan Transaksi Terbaru -->
+      <section class="card">
+        <h3>Transaksi Terbaru</h3>
+        <ul class="history-list" id="recentHistoryList">
+          <li class="empty-msg">Belum ada transaksi dicatat.</li>
+        </ul>
+      </section>
+    </main>
+
+    <!-- ==========================================
+         MENU 2: TRANSAKSI
+         ========================================== -->
+    <main id="tabTransaction" class="tab-content">
+      <section class="card">
+        <h3>Catat Transaksi</h3>
+        <form id="transactionForm" class="form-group">
+          <label for="txType">Jenis Transaksi</label>
+          <select id="txType" required>
+            <option value="income">📥 Pemasukan (Tambah Saldo Tersedia)</option>
+            <option value="expense" selected>💸 Pengeluaran (Kurangi Saldo Tersedia)</option>
+            <option value="save">💰 Menabung (Pindahkan ke Target)</option>
+            <option value="withdraw">🔄 Tarik Tabungan (Ke Saldo Tersedia)</option>
+          </select>
+
+          <label for="txTitle">Keterangan / Catatan</label>
+          <input type="text" id="txTitle" placeholder="Misal: Uang Saku / Es Boba" required>
+
+          <label for="txCategory">Kategori</label>
+          <select id="txCategory">
+            <option value="Makanan">🍔 Makanan / Jajanan</option>
+            <option value="Transportasi">🚌 Transportasi / Bensin</option>
+            <option value="Hiburan">🎮 Hiburan / Top-up</option>
+            <option value="Pendidikan">📚 Pendidikan / Alat Tulis</option>
+            <option value="Umum">📦 Pemasukan / Lainnya</option>
+          </select>
+
+          <!-- Opsi Alokasi Target Khusus Menabung -->
+          <div id="targetAllocationGroup" class="hidden-field">
+            <label for="targetAllocationSelect">Pilih Target Tujuan</label>
+            <select id="targetAllocationSelect"></select>
+          </div>
+
+          <label for="txAmount">Nominal (Rp)</label>
+          <input type="text" id="txAmount" inputmode="numeric" placeholder="Rp 0" required>
+
+          <button type="submit" class="btn btn-action">Simpan Transaksi</button>
+        </form>
+      </section>
+
+      <!-- Pengaturan Anggaran Uang Saku Rutin -->
+      <section class="card">
+        <h3>Atur Anggaran Uang Saku</h3>
+        <form id="allowanceForm" class="form-group">
+          <label for="allowanceInput">Nominal Uang Saku (Rp)</label>
+          <input type="text" id="allowanceInput" inputmode="numeric" placeholder="Rp 0" required>
+
+          <label for="periodSelect">Periode Uang Saku</label>
+          <select id="periodSelect">
+            <option value="1">Harian (1 Hari)</option>
+            <option value="7" selected>Mingguan (7 Hari)</option>
+            <option value="30">Bulanan (30 Hari)</option>
+          </select>
+
+          <button type="submit" class="btn btn-primary">Simpan Anggaran</button>
+        </form>
+      </section>
+    </main>
+
+    <!-- ==========================================
+         MENU 3: TARGET TABUNGAN
+         ========================================== -->
+    <main id="tabTarget" class="tab-content">
+      <section class="card">
+        <h3>Tambah Target Impian</h3>
+        <form id="targetForm" class="form-group">
+          <label for="targetNameInput">Nama Target</label>
+          <input type="text" id="targetNameInput" placeholder="Misal: Sepatu Baru" required>
+
+          <label for="targetAmountInput">Nominal Sasaran Target (Rp)</label>
+          <input type="text" id="targetAmountInput" inputmode="numeric" placeholder="Rp 0" required>
+
+          <button type="submit" class="btn btn-primary">Simpan Target Baru</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h3>Daftar Target Kamu</h3>
+        <div id="targetListContainer" class="target-list-container">
+          <div class="empty-msg">Belum ada target dibuat.</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ==========================================
+         MENU 4: STATISTIK & KATEGORI
+         ========================================== -->
+    <main id="tabStats" class="tab-content">
+      <section class="card">
+        <h3>📊 Analisis Pengeluaran</h3>
+        
+        <div class="filter-period-group">
+          <button class="filter-btn active" data-period="daily">Hari Ini</button>
+          <button class="filter-btn" data-period="weekly">7 Hari</button>
+          <button class="filter-btn" data-period="monthly">30 Hari</button>
+        </div>
+
+        <div class="chart-wrapper">
+          <canvas id="categoryPieChart" width="200" height="200"></canvas>
+        </div>
+
+        <div id="categoryBreakdown" class="category-breakdown-list"></div>
+      </section>
+
+      <section class="card">
+        <h3>📜 Riwayat Transaksi Lengkap</h3>
+        <ul class="history-list" id="fullHistoryList">
+          <li class="empty-msg">Belum ada transaksi.</li>
+        </ul>
+        <button id="resetDataBtn" class="btn btn-danger">Reset Seluruh Data</button>
+      </section>
+    </main>
+
+    <!-- ==========================================
+         MENU 5: GAMES RETRO
+         ========================================== -->
+    <main id="tabGames" class="tab-content">
+      <section class="card game-card">
+        <h3>🎮 Game Retro Hiburan</h3>
+        
+        <div class="game-selector">
+          <button id="selectSnakeBtn" class="game-tab-btn active">Snake</button>
+          <button id="selectBrickBtn" class="game-tab-btn">Brick Breaker</button>
+        </div>
+
+        <!-- Ukuran Arena Layar Dikunci Tepat 300x300 px -->
+        <div class="game-screen-wrapper">
+          <canvas id="gameCanvas" width="300" height="300"></canvas>
+        </div>
+
+        <div class="game-info-bar">
+          <span>Skor: <strong id="gameScore">0</strong></span>
+          <span>Tertinggi: <strong id="gameHighScore">0</strong></span>
+        </div>
+
+        <button id="startGameBtn" class="btn btn-primary mt-10">Mulai Game</button>
+        
+        <!-- Touch D-Pad Controls untuk HP -->
+        <div class="dpad-container">
+          <button class="dpad-btn" id="btnUp">▲</button>
+          <div class="dpad-row">
+            <button class="dpad-btn" id="btnLeft">◄</button>
+            <button class="dpad-btn" id="btnCenter">●</button>
+            <button class="dpad-btn" id="btnRight">►</button>
+          </div>
+          <button class="dpad-btn" id="btnDown">▼</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- NAVIGASI TAB BAWAH (5 MENU) -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" id="navHomeBtn">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Beranda</span>
+      </button>
+      <button class="nav-item" id="navTxBtn">
+        <span class="nav-icon">💳</span>
+        <span class="nav-label">Transaksi</span>
+      </button>
+      <button class="nav-item" id="navTargetBtn">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">Target</span>
+      </button>
+      <button class="nav-item" id="navStatsBtn">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Statistik</span>
+      </button>
+      <button class="nav-item" id="navGamesBtn">
+        <span class="nav-icon">🎮</span>
+        <span class="nav-label">Games</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
