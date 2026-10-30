@@ -15,8 +15,8 @@ let appData = {
 
 const BADGES = [
   { id: 'first_save', name: 'Nabung Perdana', icon: '🌱', reqStreak: 0, reqSave: true },
-  { id: 'streak_3', name: 'Hemat 3 Hari', icon: '⚡', reqStreak: 3, reqSave: false },
-  { id: 'streak_7', name: 'Master 7 Hari', icon: '👑', reqStreak: 7, reqSave: false }
+  { id: 'streak_3', name: 'Hemat 3 Hari', icon: '🪴', reqStreak: 3, reqSave: false },
+  { id: 'streak_7', name: 'Master 7 Hari', icon: '🌳', reqStreak: 7, reqSave: false }
 ];
 
 let selectedFilterPeriod = 'daily';
@@ -272,6 +272,7 @@ function recalculateAll() {
   const today = new Date().toLocaleDateString('id-ID');
   const dailyLimit = Math.round(appData.allowance / (appData.periodDays || 7));
 
+  // Hitung total pengeluaran + menabung hari ini
   const todayExpense = appData.transactions
     .filter(tx => tx.date === today && (tx.type === 'expense' || tx.type === 'save'))
     .reduce((sum, tx) => sum + tx.amount, 0);
@@ -280,14 +281,24 @@ function recalculateAll() {
     .filter(tx => tx.date === today && (tx.type === 'income' || tx.type === 'withdraw'))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const remainingDailyBudget = Math.max(0, (dailyLimit + todayIncome) - todayExpense);
+  const remainingDailyBudget = (dailyLimit + todayIncome) - todayExpense;
 
-  document.getElementById('dailyBudgetDisplay').textContent = `Rp ${remainingDailyBudget.toLocaleString('id-ID')}`;
+  // Cek Peringatan Overbudget & Matikan Api Streak
+  const warningBanner = document.getElementById('overbudgetWarningBanner');
+  if (remainingDailyBudget < 0) {
+    appData.streakDays = 0; // Reset streak seketika
+    if (warningBanner) warningBanner.classList.remove('hidden-field');
+  } else {
+    if (warningBanner) warningBanner.classList.add('hidden-field');
+  }
+
+  // Tampilkan sisa budget (minimal Rp 0 di UI)
+  document.getElementById('dailyBudgetDisplay').textContent = `Rp ${Math.max(0, remainingDailyBudget).toLocaleString('id-ID')}`;
   document.getElementById('dailyLimitDisplay').textContent = `Rp ${dailyLimit.toLocaleString('id-ID')}`;
   document.getElementById('allowanceInfoDisplay').textContent = `Rp ${appData.allowance.toLocaleString('id-ID')} / ${appData.periodDays} Hari`;
   document.getElementById('streakCount').textContent = appData.streakDays;
 
-  // Render Lencana Api Bergaya TikTok
+  // Render ulang UI pendukung
   renderTikTokStreakBadge();
   renderTargets();
   renderBadges();
@@ -306,7 +317,7 @@ function renderTikTokStreakBadge() {
   if (count === 0) {
     badgeEl.classList.add('streak-lvl-0');
     fireIconEl.textContent = '🔥';
-    levelLabelEl.textContent = 'Mulai';
+    levelLabelEl.textContent = 'Dingin';
   } else if (count < 3) {
     badgeEl.classList.add('streak-lvl-1');
     fireIconEl.textContent = '🔥';
