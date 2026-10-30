@@ -371,3 +371,54 @@ input, select {
 .history-item { display: flex; justify-content: space-between; padding: 12px 2px; border-bottom: 1px solid var(--border-color); font-size: .78rem; }
 .empty-msg { padding: 18px; color: var(--text-muted); text-align: center; font-size: .8rem; }
 .mt-10 { margin-top: 14px; }
+
+/* Styling Banner Peringatan Overbudget */
+.warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(251, 113, 133, .12);
+  border: 1px solid rgba(251, 113, 133, .4);
+  border-radius: 16px;
+  color: var(--danger);
+  margin-bottom: 4px;
+  animation: tabEnter .28s ease both;
+}
+
+.warning-icon {
+  font-size: 1.4rem;
+  flex: 0 0 auto;
+}
+
+.warning-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.warning-text strong {
+  font-size: .83rem;
+  font-weight: 800;
+  color: var(--danger);
+}
+
+.warning-text small {
+  font-size: .72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Fix Chart Statistik Tepat di Tengah Presisi */
+.chart-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 16px 0 20px;
+}
+
+#categoryPieChart {
+  display: block;
+  margin: 0 auto;
+}
