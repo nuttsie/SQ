@@ -1,8 +1,8 @@
 // ==========================================
-// 1. STATE BUKU BESAR MURNI
+// 1. STATE MANAGEMENT (FOKUS MANAJEMEN UANG SAKU)
 // ==========================================
 let appData = {
-  allowance: 0,
+  allowance: 70000,
   periodDays: 7,
   targets: [],
   activeTargetId: null,
@@ -13,13 +13,53 @@ let appData = {
   brickHighScore: 0
 };
 
+const BADGES = [
+  { id: 'first_save', name: 'Nabung Perdana', icon: '🌱', reqStreak: 0, reqSave: true },
+  { id: 'streak_3', name: 'Hemat 3 Hari', icon: '⚡', reqStreak: 3, reqSave: false },
+  { id: 'streak_7', name: 'Master 7 Hari', icon: '👑', reqStreak: 7, reqSave: false }
+];
+
 let selectedFilterPeriod = 'daily';
 let currentGame = 'snake';
 let gameInterval = null;
 let gameScore = 0;
 
 // ==========================================
-// 2. HELPER SANITASI MURNI & PARSING ANGKANOMINAL
+// 2. AUDIO CONFETTI SYNTH (SUARA SELEBRASI)
+// ==========================================
+function playConfettiSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    const playTone = (freq, type, delay, duration) => {
+      setTimeout(() => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      }, delay);
+    };
+
+    // Nada Fanfare Selebrasi Konfeti
+    playTone(523.25, 'triangle', 0, 0.15);   // C5
+    playTone(659.25, 'triangle', 100, 0.15); // E5
+    playTone(783.99, 'triangle', 200, 0.15); // G5
+    playTone(1046.50, 'square', 300, 0.4);   // C6
+  } catch (e) {
+    console.log('Audio Context error', e);
+  }
+}
+
+// ==========================================
+// 3. HELPER FORMAT & SANITASI NUMERIK
 // ==========================================
 function formatRupiahInput(e) {
   let value = e.target.value.replace(/[^0-9]/g, '');
@@ -38,11 +78,12 @@ function parseRupiahValue(textValue) {
 }
 
 // ==========================================
-// 3. INIT & EVENT LISTENERS
+// 4. INIT & EVENT LISTENERS
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   loadData();
+  checkAndRolloverUnusedBudget();
   registerEvents();
   initTabNavigation();
   initFilterEvents();
@@ -51,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initTheme() {
-  const savedTheme = localStorage.getItem('sakuquest_theme') || 'dark';
+  const savedTheme = localStorage.getItem('sakuq_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
   const themeBtn = document.getElementById('themeToggleBtn');
   if (themeBtn) themeBtn.textContent = savedTheme === 'light' ? '☀️' : '🌙';
@@ -61,12 +102,12 @@ function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('sakuquest_theme', next);
+  localStorage.setItem('sakuq_theme', next);
   document.getElementById('themeToggleBtn').textContent = next === 'light' ? '☀️' : '🌙';
 }
 
 function loadData() {
-  const saved = localStorage.getItem('sakuquest_data');
+  const saved = localStorage.getItem('sakuq_data');
   if (saved) {
     try {
       appData = { ...appData, ...JSON.parse(saved) };
@@ -79,7 +120,7 @@ function loadData() {
 }
 
 function saveData() {
-  localStorage.setItem('sakuquest_data', JSON.stringify(appData));
+  localStorage.setItem('sakuq_data', JSON.stringify(appData));
   recalculateAll();
 }
 
@@ -140,6 +181,10 @@ function registerEvents() {
 
     if (amount <= 0) return alert('Masukkan nominal angka di atas 0.');
 
+    if (type === 'save' && appData.targets.length === 0) {
+      return alert('Buat target tabungan terlebih dahulu di menu Target!');
+    }
+
     appData.transactions.unshift({
       id: Date.now(),
       type,
@@ -163,15 +208,21 @@ function registerEvents() {
     e.preventDefault();
     const name = document.getElementById('targetNameInput').value;
     const amount = parseRupiahValue(document.getElementById('targetAmountInput').value);
+    let link = document.getElementById('targetLinkInput').value.trim();
 
     if (amount <= 0) return alert('Nominal target harus lebih dari 0.');
 
-    const newTarget = { id: Date.now(), name, amount };
+    if (link && !link.startsWith('http://') && !link.startsWith('https://')) {
+      link = 'https://' + link;
+    }
+
+    const newTarget = { id: Date.now(), name, amount, link: link || null };
     appData.targets.push(newTarget);
     if (!appData.activeTargetId) appData.activeTargetId = newTarget.id;
 
     document.getElementById('targetNameInput').value = '';
     document.getElementById('targetAmountInput').value = '';
+    document.getElementById('targetLinkInput').value = '';
 
     saveData();
     alert(`🎯 Target "${name}" berhasil ditambahkan!`);
@@ -186,58 +237,120 @@ function registerEvents() {
     alert('💰 Anggaran uang saku berhasil disimpan!');
   });
 
-  document.getElementById('resetDataBtn').addEventListener('click', () => {
-    if (confirm('Apakah Anda yakin ingin menghapus seluruh data SakuQ?')) {
-      localStorage.removeItem('sakuquest_data');
-      location.reload();
-    }
-  });
+  const resetBtn = document.getElementById('resetDataBtn');
+  if (resetBtn) {
+    resetBtn.onclick = function() {
+      if (confirm('⚠️ Yakin ingin menghapus seluruh catatan uang saku, target, dan riwayat SakuQ?')) {
+        localStorage.removeItem('sakuq_data');
+        localStorage.removeItem('sakuq_theme');
+        localStorage.removeItem('sakuq_last_rollover');
+        alert('🗑️ Seluruh data berhasil dibersihkan!');
+        window.location.reload(true);
+      }
+    };
+  }
 }
 
 function populateTargetDropdown() {
   const select = document.getElementById('targetAllocationSelect');
+  if (!select) return;
+
   if (appData.targets.length === 0) {
     select.innerHTML = '<option value="">(Belum Ada Target - Buat di Menu Target)</option>';
   } else {
-    select.innerHTML = appData.targets.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    select.innerHTML = appData.targets.map(t => {
+      const isSelected = t.id === appData.activeTargetId ? 'selected' : '';
+      return `<option value="${t.id}" ${isSelected}>${t.name} ${t.id === appData.activeTargetId ? '⭐ (Aktif)' : ''}</option>`;
+    }).join('');
   }
 }
 
 // ==========================================
-// 4. KALKULASI SALDO & STREAK
+// 5. STREAK TIKTOK DINAMIS & KALKULASI
 // ==========================================
 function recalculateAll() {
-  let income = 0;
-  let expense = 0;
-  let saved = 0;
-  let withdrawn = 0;
-
-  appData.transactions.forEach(tx => {
-    if (tx.type === 'income') income += tx.amount;
-    if (tx.type === 'expense') expense += tx.amount;
-    if (tx.type === 'save') saved += tx.amount;
-    if (tx.type === 'withdraw') withdrawn += tx.amount;
-  });
-
-  const availableBalance = (income + withdrawn) - (expense + saved);
-  const totalSavings = saved - withdrawn;
-  const totalNet = availableBalance + totalSavings;
-
   const today = new Date().toLocaleDateString('id-ID');
-  const todaySpent = appData.transactions
-    .filter(tx => tx.type === 'expense' && tx.date === today)
+  const dailyLimit = Math.round(appData.allowance / (appData.periodDays || 7));
+
+  const todayExpense = appData.transactions
+    .filter(tx => tx.date === today && (tx.type === 'expense' || tx.type === 'save'))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const dailyBudget = Math.max(0, (appData.allowance / appData.periodDays) - todaySpent);
+  const todayIncome = appData.transactions
+    .filter(tx => tx.date === today && (tx.type === 'income' || tx.type === 'withdraw'))
+    .reduce((sum, tx) => sum + tx.amount, 0);
 
-  document.getElementById('availableBalanceDisplay').textContent = `Rp ${Math.max(0, availableBalance).toLocaleString('id-ID')}`;
-  document.getElementById('totalSavingsDisplay').textContent = `Rp ${Math.max(0, totalSavings).toLocaleString('id-ID')}`;
-  document.getElementById('totalNetDisplay').textContent = `Rp ${Math.max(0, totalNet).toLocaleString('id-ID')}`;
-  document.getElementById('dailyBudgetDisplay').textContent = `Rp ${Math.round(dailyBudget).toLocaleString('id-ID')}`;
+  const remainingDailyBudget = Math.max(0, (dailyLimit + todayIncome) - todayExpense);
+
+  document.getElementById('dailyBudgetDisplay').textContent = `Rp ${remainingDailyBudget.toLocaleString('id-ID')}`;
+  document.getElementById('dailyLimitDisplay').textContent = `Rp ${dailyLimit.toLocaleString('id-ID')}`;
+  document.getElementById('allowanceInfoDisplay').textContent = `Rp ${appData.allowance.toLocaleString('id-ID')} / ${appData.periodDays} Hari`;
   document.getElementById('streakCount').textContent = appData.streakDays;
 
-  renderTargets(totalSavings);
+  // Render Lencana Api Bergaya TikTok
+  renderTikTokStreakBadge();
+  renderTargets();
+  renderBadges();
   renderHistoryLists();
+}
+
+function renderTikTokStreakBadge() {
+  const badgeEl = document.getElementById('streakBadge');
+  const fireIconEl = document.getElementById('streakFireIcon');
+  const levelLabelEl = document.getElementById('streakLevelLabel');
+  if (!badgeEl) return;
+
+  const count = appData.streakDays;
+  badgeEl.className = 'streak-badge-tiktok';
+
+  if (count === 0) {
+    badgeEl.classList.add('streak-lvl-0');
+    fireIconEl.textContent = '🔥';
+    levelLabelEl.textContent = 'Mulai';
+  } else if (count < 3) {
+    badgeEl.classList.add('streak-lvl-1');
+    fireIconEl.textContent = '🔥';
+    levelLabelEl.textContent = 'Panas';
+  } else if (count < 7) {
+    badgeEl.classList.add('streak-lvl-2');
+    fireIconEl.textContent = '💥';
+    levelLabelEl.textContent = 'Membara';
+  } else {
+    badgeEl.classList.add('streak-lvl-3');
+    fireIconEl.textContent = '⚡';
+    levelLabelEl.textContent = 'Sultan';
+  }
+}
+
+function checkAndRolloverUnusedBudget() {
+  const today = new Date().toLocaleDateString('id-ID');
+  const lastCheck = localStorage.getItem('sakuq_last_rollover');
+
+  if (lastCheck && lastCheck !== today) {
+    const dailyLimit = Math.round(appData.allowance / (appData.periodDays || 7));
+    const yesterdaySpent = appData.transactions
+      .filter(tx => (tx.type === 'expense' || tx.type === 'save') && tx.date === lastCheck)
+      .reduce((sum, tx) => sum + tx.amount, 0);
+
+    const unusedBudget = dailyLimit - yesterdaySpent;
+
+    if (unusedBudget > 0 && appData.targets.length > 0) {
+      const activeTargetId = appData.activeTargetId || appData.targets[0].id;
+      appData.transactions.unshift({
+        id: Date.now(),
+        type: 'save',
+        title: `Hemat Sisa Anggaran (${lastCheck})`,
+        category: 'Umum',
+        amount: unusedBudget,
+        targetId: activeTargetId,
+        timestamp: Date.now(),
+        date: today
+      });
+      appData.streakDays += 1;
+    }
+  }
+
+  localStorage.setItem('sakuq_last_rollover', today);
 }
 
 function updateStreak() {
@@ -248,10 +361,30 @@ function updateStreak() {
   }
 }
 
+function renderBadges() {
+  const container = document.getElementById('badgesContainer');
+  if (!container) return;
+
+  const hasSavings = appData.transactions.some(tx => tx.type === 'save');
+
+  container.innerHTML = BADGES.map(b => {
+    let unlocked = false;
+    if (b.reqSave && hasSavings) unlocked = true;
+    if (b.reqStreak > 0 && appData.streakDays >= b.reqStreak) unlocked = true;
+
+    return `
+      <div class="badge-card-item ${unlocked ? 'unlocked' : ''}">
+        <span class="badge-card-icon">${b.icon}</span>
+        <span class="badge-card-title">${b.name}</span>
+      </div>
+    `;
+  }).join('');
+}
+
 // ==========================================
-// 5. RENDER TARGETS & TRANSAKSI
+// 6. RENDER TARGETS (LINK DI BERANDA + SUARA KONFETI)
 // ==========================================
-function renderTargets(globalSavings) {
+function renderTargets() {
   const activeTarget = appData.targets.find(t => t.id === appData.activeTargetId) || appData.targets[0] || null;
 
   if (activeTarget) {
@@ -265,11 +398,32 @@ function renderTargets(globalSavings) {
     document.getElementById('activeTargetProgressPercent').textContent = `${percent}%`;
     document.getElementById('activeTargetProgressBar').style.width = `${percent}%`;
     document.getElementById('activeTargetAmountText').textContent = `Rp ${targetSavings.toLocaleString('id-ID')} / Rp ${activeTarget.amount.toLocaleString('id-ID')}`;
+
+    // Link Produk di Kartu Beranda
+    const linkHomeContainer = document.getElementById('activeTargetLinkContainer');
+    if (linkHomeContainer) {
+      if (activeTarget.link) {
+        linkHomeContainer.innerHTML = `<a href="${activeTarget.link}" target="_blank" rel="noopener noreferrer" class="btn-link-home">🔗 Link Produk</a>`;
+      } else {
+        linkHomeContainer.innerHTML = '';
+      }
+    }
+
+    // Efek Visual Konfeti + Efek Suara Selebrasi Audio Context
+    if (percent >= 100 && !activeTarget.celebrated) {
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      }
+      playConfettiSound();
+      activeTarget.celebrated = true;
+    }
   } else {
     document.getElementById('activeTargetName').textContent = 'Belum Ada Target';
     document.getElementById('activeTargetProgressPercent').textContent = '0%';
     document.getElementById('activeTargetProgressBar').style.width = '0%';
     document.getElementById('activeTargetAmountText').textContent = 'Rp 0 / Rp 0';
+    const linkHomeContainer = document.getElementById('activeTargetLinkContainer');
+    if (linkHomeContainer) linkHomeContainer.innerHTML = '';
   }
 
   const container = document.getElementById('targetListContainer');
@@ -295,6 +449,7 @@ function renderTargets(globalSavings) {
             </div>
             <div class="target-actions-btn">
               ${!isActive ? `<button onclick="selectTarget(${t.id})" class="btn-small btn-select">Set Aktif</button>` : ''}
+              ${t.link ? `<a href="${t.link}" target="_blank" rel="noopener noreferrer" class="btn-small btn-action" style="text-decoration:none; display:inline-block; text-align:center;">🔗 Link Produk</a>` : ''}
               <button onclick="deleteTarget(${t.id})" class="btn-small btn-delete">Hapus</button>
             </div>
           </div>
@@ -306,8 +461,9 @@ function renderTargets(globalSavings) {
 
 function renderHistoryLists() {
   const formatItem = (tx) => {
-    const sign = tx.type === 'income' || tx.type === 'withdraw' ? '+' : '-';
-    const color = sign === '+' ? 'var(--accent)' : 'var(--danger)';
+    const isPositive = tx.type === 'income' || tx.type === 'withdraw';
+    const sign = isPositive ? '+' : '-';
+    const color = isPositive ? 'var(--accent)' : 'var(--danger)';
     return `
       <li class="history-item">
         <span>${tx.title} <small>(${tx.category || 'Umum'})</small></span>
@@ -345,7 +501,7 @@ function deleteTarget(id) {
 }
 
 // ==========================================
-// 6. ANALISIS PERIODE
+// 7. ANALISIS PERIODE
 // ==========================================
 function initFilterEvents() {
   const btns = document.querySelectorAll('.filter-btn');
@@ -443,10 +599,11 @@ function drawPieChart(categories, grandTotal) {
 }
 
 // ==========================================
-// 7. MINI GAMES RETRO 
+// 8. MINI GAMES RETRO (SNAKE & BRICK BREAKER)
 // ==========================================
 let snake = [];
 let snakeDir = 'RIGHT';
+let nextSnakeDir = 'RIGHT';
 let food = { x: 0, y: 0 };
 let paddleX = 110;
 let ball = { x: 150, y: 240, dx: 3, dy: -3 };
@@ -482,7 +639,6 @@ function initGameEvents() {
     };
   }
 
-  // 1. Kontrol Keyboard Desktop (WASD & Panah)
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (currentGame === 'snake') {
@@ -496,7 +652,6 @@ function initGameEvents() {
     }
   });
 
-  // 2. Kontrol Touch D-Pad Layar HP (Memperbaiki D-Pad yang Mogok)
   const btnUp = document.getElementById('btnUp');
   const btnDown = document.getElementById('btnDown');
   const btnLeft = document.getElementById('btnLeft');
@@ -505,36 +660,31 @@ function initGameEvents() {
   const handleTouch = (btn, action) => {
     if (!btn) return;
     const trigger = (e) => {
-      e.preventDefault(); // Mencegah layar HP ter-scroll saat mencet D-Pad
+      if (e.cancelable) e.preventDefault();
       action();
+      btn.classList.add('active');
+      setTimeout(() => btn.classList.remove('active'), 100);
     };
     btn.addEventListener('touchstart', trigger, { passive: false });
     btn.addEventListener('click', trigger);
   };
 
-  handleTouch(btnUp, () => {
-    if (snakeDir !== 'DOWN') nextSnakeDir = 'UP';
-  });
-
-  handleTouch(btnDown, () => {
-    if (snakeDir !== 'UP') nextSnakeDir = 'DOWN';
-  });
-
+  handleTouch(btnUp, () => { if (snakeDir !== 'DOWN') nextSnakeDir = 'UP'; });
+  handleTouch(btnDown, () => { if (snakeDir !== 'UP') nextSnakeDir = 'DOWN'; });
   handleTouch(btnLeft, () => {
     if (currentGame === 'snake' && snakeDir !== 'RIGHT') nextSnakeDir = 'LEFT';
     if (currentGame === 'brick') paddleX = Math.max(0, paddleX - 25);
   });
-
   handleTouch(btnRight, () => {
     if (currentGame === 'snake' && snakeDir !== 'LEFT') nextSnakeDir = 'RIGHT';
     if (currentGame === 'brick') paddleX = Math.min(220, paddleX + 25);
   });
 }
+
 function stopGameLoop() {
   if (gameInterval) clearInterval(gameInterval);
 }
 
-// Fungsi pembantu untuk mengunci ukuran internal Canvas
 function fixCanvasSize() {
   const canvas = document.getElementById('gameCanvas');
   if (!canvas) return null;
@@ -557,11 +707,6 @@ function resetGameScreen() {
   document.getElementById('gameHighScore').textContent = currentGame === 'snake' ? appData.snakeHighScore : appData.brickHighScore;
 }
 
-// GAME 1: SNAKE KLASIK
-// Variable penampung arah agar tidak berbalik instant
-let nextSnakeDir = 'RIGHT';
-
-// 1. Definisikan fungsi spawn makanan di atas sebelum dipanggil
 function spawnSnakeFood() {
   food = {
     x: Math.floor(Math.random() * 20),
@@ -569,24 +714,18 @@ function spawnSnakeFood() {
   };
 }
 
-// 2. Fungsi Utama Game Snake
 function startSnakeGame() {
-  stopGameLoop(); // Hentikan loop game sebelumnya
+  stopGameLoop();
   const canvas = fixCanvasSize();
   if (!canvas) return;
 
-  // Inisialisasi Ular & Arah
   snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }];
   snakeDir = 'RIGHT';
   nextSnakeDir = 'RIGHT';
   gameScore = 0;
-  
-  // Buat makanan pertama
   spawnSnakeFood();
 
-  // Jalankan interval pergerakan ular
   gameInterval = setInterval(() => {
-    // Terapkan arah baru dari buffer
     snakeDir = nextSnakeDir;
 
     const head = { ...snake[0] };
@@ -595,7 +734,6 @@ function startSnakeGame() {
     if (snakeDir === 'LEFT') head.x -= 1;
     if (snakeDir === 'RIGHT') head.x += 1;
 
-    // Deteksi Tabrakan Tembok (Grid 0-19) atau Menabrak Ekor Sendiri
     if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 || snake.some(s => s.x === head.x && s.y === head.y)) {
       stopGameLoop();
       alert(`GAME OVER! Skor: ${gameScore}`);
@@ -608,7 +746,6 @@ function startSnakeGame() {
 
     snake.unshift(head);
 
-    // Memakan Makanan
     if (head.x === food.x && head.y === food.y) {
       gameScore += 10;
       document.getElementById('gameScore').textContent = gameScore;
@@ -617,7 +754,6 @@ function startSnakeGame() {
       snake.pop();
     }
 
-    // Render Ular & Makanan di Canvas
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#9bbc0f';
     ctx.fillRect(0, 0, 300, 300);
@@ -629,13 +765,13 @@ function startSnakeGame() {
     ctx.fillRect(food.x * 15, food.y * 15, 14, 14);
   }, 120);
 }
-// GAME 2: BRICK BREAKER
+
 function startBrickGame() {
   stopGameLoop();
   const canvas = fixCanvasSize();
+  if (!canvas) return;
 
   paddleX = 110;
-  
   const randomDx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 1.5);
   ball = { x: paddleX + 40, y: 250, dx: randomDx, dy: -3.5 };
   gameScore = 0;
@@ -651,7 +787,6 @@ function startBrickGame() {
     ball.x += ball.dx;
     ball.y += ball.dy;
 
-    // Pantulan Tembok Kiri (0px) & Kanan Presisi (295px)
     if (ball.x <= 5) {
       ball.dx = Math.abs(ball.dx);
       ball.x = 5;
@@ -660,20 +795,17 @@ function startBrickGame() {
       ball.x = 295;
     }
 
-    // Pantulan Tembok Atas
     if (ball.y <= 5) {
       ball.dy = Math.abs(ball.dy);
       ball.y = 5;
     }
 
-    // Pantulan Paddle
     if (ball.y >= 260 && ball.y <= 270 && ball.x >= paddleX && ball.x <= paddleX + 80) {
       ball.dy = -Math.abs(ball.dy);
       const hitPoint = (ball.x - (paddleX + 40)) / 40;
       ball.dx = hitPoint * 4;
     }
 
-    // Jatuh ke Bawah Layar
     if (ball.y > 295) {
       stopGameLoop();
       alert(`GAME OVER! Skor: ${gameScore}`);
@@ -684,7 +816,6 @@ function startBrickGame() {
       return;
     }
 
-    // Benturan Bata
     bricks.forEach(b => {
       if (b.alive && ball.x >= b.x && ball.x <= b.x + 44 && ball.y >= b.y && ball.y <= b.y + 14) {
         b.alive = false;
