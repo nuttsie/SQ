@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SakuQ - Hemat & Nabung Seru</title>
-  <link rel="stylesheet" href="style.css?v=35">
+  <link rel="stylesheet" href="style.css?v=45">
   <!-- Pustaka Efek Konfeti saat Target 100% -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
@@ -21,9 +21,11 @@
         <!-- Tombol Switch Tema -->
         <button id="themeToggleBtn" class="theme-btn" title="Ubah Tema">🌙</button>
         
-        <!-- Lencana Streak Hari Hemat -->
-        <div class="streak-badge" id="streakBadge" title="Streak Hari Hemat">
-          🔥 <span id="streakCount">0</span> Hari
+        <!-- Lencana Streak Hari Hemat Bergaya TikTok (Lencana Api Dinamis) -->
+        <div class="streak-badge-tiktok" id="streakBadge" title="Streak Hari Hemat">
+          <span class="fire-icon" id="streakFireIcon">🔥</span>
+          <span class="streak-num" id="streakCount">0</span>
+          <small class="streak-label" id="streakLevelLabel">Pemula</small>
         </div>
       </div>
     </header>
@@ -33,24 +35,23 @@
          ========================================== -->
     <main id="tabHome" class="tab-content active-tab">
       <section class="card summary-card">
-        <h2>Ringkasan Keuangan</h2>
+        <h2>Uang Saku & Jajan Hari Ini</h2>
         <div class="balance-grid">
           <div class="stat-box primary-box">
-            <small>Saldo Tersedia</small>
-            <div class="stat-value" id="availableBalanceDisplay">Rp 0</div>
+            <small>Sisa Jajan Hari Ini</small>
+            <div class="stat-value" id="dailyBudgetDisplay">Rp 0</div>
           </div>
           <div class="stat-box accent-box">
-            <small>Total Tabungan</small>
-            <div class="stat-value" id="totalSavingsDisplay">Rp 0</div>
+            <small>Batas Jajan Harian</small>
+            <div class="stat-value" id="dailyLimitDisplay">Rp 0</div>
           </div>
         </div>
         
         <div class="total-net-box">
-          <small>Total Uang Tercatat: <strong id="totalNetDisplay">Rp 0</strong></small>
-          <small class="sub-text">Sisa Jajan Hari Ini: <strong id="dailyBudgetDisplay">Rp 0</strong></small>
+          <small class="sub-text">Anggaran Rutin: <strong id="allowanceInfoDisplay">Rp 0 / 7 Hari</strong></small>
         </div>
 
-        <!-- Banner Progress Bar Target Aktif -->
+        <!-- Banner Progress Bar Target Aktif (Ditambahkan Tombol Link Produk Kembali) -->
         <div class="target-section mt-10">
           <div class="target-header">
             <span>Target Aktif: <strong id="activeTargetName">Belum Ada Target</strong></span>
@@ -59,9 +60,18 @@
           <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="activeTargetProgressBar" style="width: 0%;"></div>
           </div>
-          <div class="target-sub-info">
+          <div class="target-sub-info-flex">
             <span id="activeTargetAmountText">Rp 0 / Rp 0</span>
+            <span id="activeTargetLinkContainer"></span>
           </div>
+        </div>
+      </section>
+
+      <!-- BADGES / LENCANA PENCAPAIAN DI BERANDA -->
+      <section class="card">
+        <h3>🏆 Pencapaian & Lencana</h3>
+        <div id="badgesContainer" class="badges-grid">
+          <!-- Render otomatis via JavaScript -->
         </div>
       </section>
 
@@ -83,14 +93,14 @@
         <form id="transactionForm" class="form-group">
           <label for="txType">Jenis Transaksi</label>
           <select id="txType" required>
-            <option value="income">📥 Pemasukan (Tambah Saldo Tersedia)</option>
-            <option value="expense" selected>💸 Pengeluaran (Kurangi Saldo Tersedia)</option>
-            <option value="save">💰 Menabung (Pindahkan ke Target)</option>
-            <option value="withdraw">🔄 Tarik Tabungan (Ke Saldo Tersedia)</option>
+            <option value="expense" selected>💸 Pengeluaran Jajan (Kurangi Uang Jajan)</option>
+            <option value="save">💰 Menabung (Alokasikan Uang Jajan ke Target)</option>
+            <option value="income">📥 Pemasukan Tambahan (Tambah Uang Jajan)</option>
+            <option value="withdraw">🔄 Tarik Tabungan (Kembalikan ke Uang Jajan)</option>
           </select>
 
           <label for="txTitle">Keterangan / Catatan</label>
-          <input type="text" id="txTitle" placeholder="Misal: Uang Saku / Es Boba" required>
+          <input type="text" id="txTitle" placeholder="Misal: Es Boba / Sisih Nasi Goreng" required>
 
           <label for="txCategory">Kategori</label>
           <select id="txCategory">
@@ -118,10 +128,10 @@
       <section class="card">
         <h3>Atur Anggaran Uang Saku</h3>
         <form id="allowanceForm" class="form-group">
-          <label for="allowanceInput">Nominal Uang Saku (Rp)</label>
+          <label for="allowanceInput">Nominal Uang Saku Diterima (Rp)</label>
           <input type="text" id="allowanceInput" inputmode="numeric" placeholder="Rp 0" required>
 
-          <label for="periodSelect">Periode Uang Saku</label>
+          <label for="periodSelect">Periode Penerimaan</label>
           <select id="periodSelect">
             <option value="1">Harian (1 Hari)</option>
             <option value="7" selected>Mingguan (7 Hari)</option>
@@ -145,6 +155,10 @@
 
           <label for="targetAmountInput">Nominal Sasaran Target (Rp)</label>
           <input type="text" id="targetAmountInput" inputmode="numeric" placeholder="Rp 0" required>
+
+          <!-- Link Produk Impian (Opsional) -->
+          <label for="targetLinkInput">Link Produk / Marketplace (Opsional)</label>
+          <input type="url" id="targetLinkInput" placeholder="https://shopee.co.id/... atau Tokopedia">
 
           <button type="submit" class="btn btn-primary">Simpan Target Baru</button>
         </form>
@@ -199,7 +213,6 @@
           <button id="selectBrickBtn" class="game-tab-btn">Brick Breaker</button>
         </div>
 
-        <!-- Ukuran Arena Layar Dikunci Tepat 300x300 px -->
         <div class="game-screen-wrapper">
           <canvas id="gameCanvas" width="300" height="300"></canvas>
         </div>
@@ -211,7 +224,6 @@
 
         <button id="startGameBtn" class="btn btn-primary mt-10">Mulai Game</button>
         
-        <!-- Touch D-Pad Controls untuk HP -->
         <div class="dpad-container">
           <button class="dpad-btn" id="btnUp">▲</button>
           <div class="dpad-row">
